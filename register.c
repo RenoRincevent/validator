@@ -93,6 +93,7 @@ void dump_float_registers(PROC(_state_t) * st)
 #define REG_NPC 	3
 #define REG_PC		4
 #define REG_LLbit	5
+#define REG_FFLAGS	6
 
 
 /* function called at initialization,
@@ -123,6 +124,8 @@ void get_gliss_reg_addr(char *desc, PROC(_state_t) * st, int *bank, int *idx)
 		*bank = REG_F;
 	else if (strncmp("R", desc, 1) == 0)
 		*bank = REG_R;
+	else if (strncmp("FFLAGS", desc, 6) == 0)
+		*bank = REG_FFLAGS;
 }
 
 
@@ -149,5 +152,7 @@ uint64_t get_gliss_reg(PROC(_state_t) * st, int idx)
 		return st->PC;
 	case REG_LLbit:
 		return st->LLbit;
+	case REG_FFLAGS:
+		return st->FFLAGS;
 	}
 }
