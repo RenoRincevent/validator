@@ -1,0 +1,49 @@
+Deux gdb/mi
+il y a mi1 et mi2, mi1 est obsolète et plus prise en charge depuis gdb 6.0
+est-ce que riscv gdb et le même que gdb classique ? prend-t-il en charge mi ou non ?
+
+version de gdb : 7.11
+version de riscv-gdb : 8.2
+
+La version de riscv-gdb correspond a quel version de gdb ? riscv-gdb supporte-t-il gdb/mi version 2 ?
+
+
+test des commande lancé dans validator mais uniquement avec riscv-gdb :
+$ riscv64-unknown-elf-gdb --interpreter mi --quiet rot13-64
+=thread-group-added,id="i1"
+~"Reading symbols from rot13-64...\n"
+(gdb) -target-select remote tcp:localhost:3333
+=thread-group-started,id="i1",pid="42000"
+=thread-created,id="1",group-id="i1"
+~"0x0000000010010004 in main (argc=0, argv=0x1020) at rot13.c:11\n"
+~"11\t    while (wait);\n"
+*stopped,frame={addr="0x0000000010010004",func="main",args=[{name="argc",value="0"},{name="argv",value="0x1020"}],file="rot13.c",fullname="/home/manu/Stage/gliss2/validator3/rot13.c",line="11",arch="riscv:rv64"},thread-id="1",stopped-threads="all"
+^connected
+/* match_gdb_output() test sur le retour de *stopped si c'est egale a ^connected, c'est pour ca qu'il plante, le ^connected est juste après. */
+(gdb) -target-download
++download,{section=".text",section-size="114",total-size="5502"}
++download,{section=".text",section-sent="114",section-size="114",total-sent="114",total-size="5502"}
++download,{section=".data",section-size="34",total-size="5502"}
++download,{section=".sdata",section-size="4",total-size="5502"}
+^done,address="0x10010000",load-size="152",transfer-rate="7896",write-rate="50"
+(gdb) -data-evaluate-expression $sp
+^done,value="0x0"
+(gdb) -data-evaluate-expression $fp
+^done,value="0x0"
+(gdb) -data-evaluate-expression $pc
+^done,value="0x10010000 <main>"
+(gdb) -data-evaluate-expression $npc
+^done,value="void"
+
+//erreur lors de la commande -data-list-register-values
+(gdb) 
+-data-list-register-values r 66
+^error,msg="Could not fetch register \"fflags\"; remote failure reply 'E0E'"
+(gdb) 
+-data-list-register-values r 67
+^error,msg="Could not fetch register \"frm\"; remote failure reply 'E0E'"
+(gdb) 
+-data-list-register-values r 68
+^error,msg="Could not fetch register \"fcsr\"; remote failure reply 'E0E'"
+
+

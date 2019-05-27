@@ -1,0 +1,11 @@
+Sent -target-select remote tcp:localhost:2000
+
+Got ^error,msg="tcp:localhost:2000: Connection timed out."
+sur les site : exemple: tcp:/dev/tty0:2345 c'est pour connecter un periph ?
+
+Sent -target-download
+
+Got (gdb) 
+
+Got ^error,msg="You can't do that when your target is `exec'"
+
