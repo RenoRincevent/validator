@@ -190,15 +190,15 @@ int init_gliss(char * drive_gdb_reply_buffer)
 		fprintf(stderr, "ERROR: cannot load the given executable : %s.\n", gpname);
 		exit(2);
 	}
+
 	/* make the state depending on the platform */
-	real_state = PROC(_new_state)(platform);
+	real_state = PROC(_new_state)(platform); //PC gliss init ici, tout les autre registre sont init a zero.
 	if (real_state == NULL)  {
 		fprintf(stderr, "ERROR: no more resources\n");
 		exit(2);
 	}
-
 	/* make the simulator */
-	iss = PROC(_new_sim)(real_state, 0, 0);
+	iss = PROC(_new_sim)(real_state, real_state->PC, 0);
 	if (iss == NULL) {
 		fprintf(stderr, "ERROR: no more resources\n");
 		exit(2);
@@ -208,7 +208,7 @@ int init_gliss(char * drive_gdb_reply_buffer)
 	//TODO leon_set_range_callback(leon_get_memory(platform, LEON_MAIN_MEMORY), 0X80000000, 0xFFFFFFFF, &gdb_callback);
 	// !!DEBUG!! trouble with mem accesses (double accesses like ldd, std, lddf, stdf), it seems
 	//leon_set_range_callback(leon_get_memory(platform, LEON_MAIN_MEMORY), 0X40300000, 0x40400000, &debug_callback);
-
+	
 	send_gdb_cmd("-data-evaluate-expression $sp\n", drive_gdb_reply_buffer, display_replies);
 	printf("-data-eval-expr sp :%s\n", drive_gdb_reply_buffer);
 	uint32_t sp;
@@ -232,6 +232,12 @@ int init_gliss(char * drive_gdb_reply_buffer)
 
 	/* processor specific initialization code */
 	PROC_INIT_CODE
+	real_state->R[5] = real_state->PC; 	//t0: start address
+	real_state->R[11] = 0xc;		//a1
+	real_state->R[12] = 0xc;		//a2
+	real_state->R[13] = 0xb3;		//a3
+	real_state->R[14] = 0x21;		//a4
+	//real_state->R[15] = 0x10011000;		//a5: start section .data
 
 	return 0;
 }
@@ -318,15 +324,16 @@ int main(int argc, char ** argv)
 		
 	printf("Initializing Gliss\n");
 	init_gliss(drive_gdb_reply_buffer);
-	
 	/* after gliss and gdb are set, initialize the structure containing the infos about registers */
 	init_gdb_regs(drive_gdb_reply_buffer);	
+//	for(int k=0; k<NUM_REG;k++){
+//		fprintf(stderr,"registre(%d): %s\tgdb_idx: %d\tgliss_reg: %d\n",k,reg_infos[k].name,reg_infos[k].gdb_idx,reg_infos[k].gliss_reg);
+//		fprintf(stderr,"\tgliss_last: %ld\tgliss: %ld\tgdb_last: %ld\n",reg_infos[k].gliss_last,reg_infos[k].gliss,reg_infos[k].gdb_last);
+//	}
 	
 	instr_count = 0;
 	curinstr = PROC(_decode)(iss->decoder, real_state->PC);
-	fprintf(stderr, "IIICCCCII\n");
 	read_vars_this_instruction(drive_gdb_reply_buffer);
-	fprintf(stderr, "IIICCCCII222\n");
 	compare_regs_this_instruction(drive_gdb_reply_buffer, real_state, curinstr, instr_count);
 	PROC(_free_inst)(curinstr);
 	
@@ -336,8 +343,7 @@ int main(int argc, char ** argv)
 	while ( 1 ) 
 	{
 		instr_count++;
-		
-		
+
 		/* update PCs and nPCs */
 		send_gdb_cmd("-data-evaluate-expression $pc\n", drive_gdb_reply_buffer, display_replies);
 		read_gdb_output_pc(drive_gdb_reply_buffer, &gdb_pc);
@@ -345,17 +351,17 @@ int main(int argc, char ** argv)
 		read_gdb_output_pc(drive_gdb_reply_buffer, &gdb_npc);
 		gliss_pc = real_state->PC;
 		gliss_npc = real_state->NPC;
-		/*printf("\nAbout to execute inst %d, GDB: PC=%08X(%08X), GLISS: PC=%08X(%08X)\n", instr_count, gdb_pc, gdb_npc, gliss_pc, gliss_npc);*/
+		//printf("\nAbout to execute inst %d, GDB: PC=%08X(%08X), GLISS: PC=%08X(%08X)\n", instr_count, gdb_pc, gdb_npc, gliss_pc, gliss_npc);
 
 		if (! stall_gdb)
 		{
 			sprintf(drive_gdb_cmd_buffer, "-data-disassemble -s 0x%08X -e 0x%08X -- 0\n", gdb_pc, gdb_pc+4);
 			send_gdb_cmd(drive_gdb_cmd_buffer, drive_gdb_reply_buffer, 0);
 			/*if ((instr_count % 50000) == 0)
-			{
+			{*/
 				printf("\nAbout to execute inst %d, GDB: PC=%08X(%08X), GLISS: PC=%08X(%08X)\n", instr_count, gdb_pc, gdb_npc, gliss_pc, gliss_npc);
 				disasm_error_report(drive_gdb_reply_buffer, NULL, NULL, 1, 0);
-			}*/
+			/*}*/
 		}
 		
 		/* LEON specific */
@@ -394,8 +400,9 @@ int main(int argc, char ** argv)
 
 		curinstr = PROC(_decode)(iss->decoder, real_state->PC);
 		PROC(_step)(iss);
-		
+
 		read_vars_this_instruction(drive_gdb_reply_buffer);
+		//fprintf(stderr,"valeur de %s: %08X\n",reg_infos[15].name,reg_infos[15].gdb);
 		if (! stall_gdb)
 			compare_regs_this_instruction(drive_gdb_reply_buffer, real_state, curinstr, instr_count);
 			

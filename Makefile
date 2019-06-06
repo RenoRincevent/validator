@@ -30,6 +30,7 @@ PROC_INCL= /home/manu/Stage/riscv-nmp-gliss3-master/include/RV32G/api.h
 #	set_reg(real_state, 30, fp); \
 #	real_state->WIM = 2; \
 #	real_state->FSR = 0; \
+#	real_state->R[5] = real_state->PC; \
 #	}
 PROC_CFLAGS=  -DGLISS_REG_H=\"$(PROC_INCL)\" -DPROC_INIT_CODE='$(PROC_INIT_CODE)'
 

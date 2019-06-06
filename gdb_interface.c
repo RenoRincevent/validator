@@ -12,18 +12,19 @@ void send_gdb_cmd(char * cmd, char * replybuf, int printreply)
 	if(cmd[strlen(cmd)-1] != '\n') fprintf(stderr, "Warning: no newline at end of command %s\n", cmd);
 	write(to_gdb_pipe[1], cmd, strlen(cmd));
 	log_msg("Sent %s\n", cmd);
+	//fprintf(stderr,"Sent: %s\n",cmd);
 	wait_for_gdb_output(replybuf, printreply);
 	}
 	
 int wait_for_gdb_output(char * replybuf, int printreply)
 	{
-	//fprintf(stderr,"II contenu replybuf: %s\n",replybuf);
 	fgets(replybuf, 3999, from_gdb);
-	//fprintf(stderr,"II.2 contenu reply buffer: %s\n",replybuf);
+	//fprintf(stderr,"II Got: %s\n",replybuf);
 	log_msg("Got %s\n", replybuf);
 	if(*replybuf=='(' && *(replybuf+1) =='g')  //GDB a cette sale habitude de rajouter son invite partout. Nous allons nous en passer.
 		{ //copy paste instead of recursion for performance reasons		
 		fgets(replybuf, 3999, from_gdb);
+		//fprintf(stderr,"II.2 Got: %s\n",replybuf);
 		log_msg("Got %s\n", replybuf);
 		if(*replybuf=='(' && *(replybuf+1) =='g')  //GDB a cette sale habitude de rajouter son invite partout. Nous allons nous en passer.
 			{
@@ -36,7 +37,7 @@ int wait_for_gdb_output(char * replybuf, int printreply)
 			}
 		}
 	//TODO lorsque c'est = *stopped,frame=... c'est rien de particulier donc on peut cracher
-	if ( /**replybuf != '*' &&*/ *replybuf != '^') //alors on a rien de particulier, on crache tout
+	else if ( /**replybuf != '*' &&*/ *replybuf != '^') //alors on a rien de particulier, on crache tout
 		{
 		printf("%s", replybuf);
 		wait_for_gdb_output(replybuf, printreply);

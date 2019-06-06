@@ -37,7 +37,7 @@ void compare_regs_this_instruction(char *drive_gdb_reply_buffer, RV32G_state_t *
 			else 
 				fprintf(stdout, "\n\nAt initialization (0x%08x), register %s differs\n", gdb_pc, reg_infos[i].name);
 
-			printf("GLISS\t\t\t\t\t\tGDB\n \t              BEFORE               AFTER              BEFORE               AFTER\n\n");
+			printf("GLISS\t\t\t\t\t\tGDB\n \t BEFORE       AFTER       BEFORE       AFTER\n\n");
 			if ( ! display_full_dumps )
 			{
 				if (reg_infos[i].size == 64)

@@ -11,7 +11,7 @@ uint32_t get_reg(PROC(_state_t) * st, unsigned int idx)
 {
 	/* return R[CWP * NWINDOWS + idx] unless idx indicates a global register
 	 * NWINDOWS == 8 in the leon */
-	if (idx < 8)
+	if (idx < 32)
 		return st->R[idx];
 	//TODO return st->R[(((st->PSR & 0x1F) << 4) + idx - 8) % (8<<4) + 8];
 	return st->R[idx];
@@ -23,7 +23,7 @@ void set_reg(PROC(_state_t) * st, unsigned int idx, uint32_t val)
 	 * NWINDOWS == 8 in the leon */
 	if (idx == 0)
 		return;
-	if (idx < 8)
+	if (idx < 32)
 		st->R[idx] = val;
 	//TODO st->R[(((st->PSR & 0x1F) << 4) + idx - 8) % (8<<4) + 8] = val;
 	st->R[idx] = val;
@@ -94,6 +94,7 @@ void dump_float_registers(PROC(_state_t) * st)
 #define REG_PC		4
 #define REG_LLbit	5
 #define REG_FFLAGS	6
+#define REG_FRM		7
 
 
 /* function called at initialization,
@@ -120,12 +121,14 @@ void get_gliss_reg_addr(char *desc, PROC(_state_t) * st, int *bank, int *idx)
 		*bank = REG_NPC;
 	else if (strncmp("PC", desc, 2) == 0)
 		*bank = REG_PC;
-	else if (strncmp("F", desc, 1) == 0)
-		*bank = REG_F;
 	else if (strncmp("R", desc, 1) == 0)
 		*bank = REG_R;
 	else if (strncmp("FFLAGS", desc, 6) == 0)
 		*bank = REG_FFLAGS;
+	else if (strncmp("FRM",desc,3) == 0)
+		*bank = REG_FRM;
+	else if (strncmp("F", desc, 1) == 0)
+		*bank = REG_F;
 }
 
 

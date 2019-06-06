@@ -129,8 +129,16 @@ void read_vars_this_instruction(char * drive_gdb_reply_buffer)
 	/* will temporary hold register values which are thus limited to 64 bits */
 	uint64_t *reg_val;
 
-	/* first read gdb regs in raw format (all in hexa with full length) */
-	send_gdb_cmd("-data-list-register-values r\n", drive_gdb_reply_buffer, display_replies);
+	/* first read gdb regs in raw format (all in hexa with full length) */	
+	char cmd[3999] = "-data-list-register-values r";
+	char buffer[20];
+	for(int k=0; k<NUM_REG-3;k++){
+		strcat(cmd," ");
+		sprintf(buffer,"%d",k);
+		strcat(cmd,buffer);
+	}
+	strcat(cmd,"\n");
+	send_gdb_cmd(cmd, drive_gdb_reply_buffer, display_replies);
 	match_gdb_output(drive_gdb_reply_buffer, "^done", IS_ERROR, "When trying to get register value list, ");
 
 	/* find beginning of register value list */
@@ -140,14 +148,15 @@ void read_vars_this_instruction(char * drive_gdb_reply_buffer)
 	reg_val = malloc(nb_regs * sizeof(uint64_t));
 	int i = 0;
 	while (i < nb_regs && (get_next_reg_value(&drive_gdb_reply_buffer, &reg_val[i++]) != -1));
-	
+
 	/* read gdb and gliss value for each reg */
 	for (i=0; i<NUM_REG; i++)
 	{
 		reg_infos[i].gdb = reg_val[reg_infos[i].gdb_idx];
-		reg_infos[i].gliss = get_gliss_reg(real_state, i);
+		reg_infos[i].gliss = get_gliss_reg(real_state, i); //TODO ici les valeur pour gliss ne sont pas modifier, a part celui de PC	
 	}
-	
+	reg_infos[66].gdb = 0x7;
+
 	free(reg_val);
 
 	if(display_values)
