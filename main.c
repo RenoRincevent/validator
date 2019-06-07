@@ -232,11 +232,12 @@ int init_gliss(char * drive_gdb_reply_buffer)
 
 	/* processor specific initialization code */
 	PROC_INIT_CODE
-	real_state->R[5] = real_state->PC; 	//t0: start address
-	real_state->R[11] = 0xc;		//a1
-	real_state->R[12] = 0xc;		//a2
-	real_state->R[13] = 0xb3;		//a3
-	real_state->R[14] = 0x21;		//a4
+	//real_state->R[5] = real_state->PC; 	//t0: start address
+	//real_state->R[11] = 0x21;		//a1
+	//real_state->R[12] = 0xc;		//a2
+	//real_state->R[13] = 0x6;		//a3
+	//real_state->R[14] = 0xb3;		//a4
+	//real_state->R[15] = 0x5;		//a5
 	//real_state->R[15] = 0x10011000;		//a5: start section .data
 
 	return 0;
@@ -334,6 +335,16 @@ int main(int argc, char ** argv)
 	instr_count = 0;
 	curinstr = PROC(_decode)(iss->decoder, real_state->PC);
 	read_vars_this_instruction(drive_gdb_reply_buffer);
+	
+	//Init registers 	
+	for(int k =0; k<32; k++){
+		real_state->R[k] = reg_infos[k].gdb;
+		reg_infos[k].gliss = reg_infos[k].gdb;
+	}
+	for(int k=33; k<65; k++){
+		real_state->F[k-33] = reg_infos[k].gdb;
+		reg_infos[k].gliss = reg_infos[k].gdb;
+	}
 	compare_regs_this_instruction(drive_gdb_reply_buffer, real_state, curinstr, instr_count);
 	PROC(_free_inst)(curinstr);
 	
