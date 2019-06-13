@@ -263,6 +263,9 @@ int init_gdb(char * drive_gdb_reply_buffer, char * target)
 	snprintf(finalcmd, 199, "-target-select remote tcp:%s\n", target);
 	send_gdb_cmd(finalcmd, drive_gdb_reply_buffer, display_replies);
 	match_gdb_output(drive_gdb_reply_buffer, "^connected", IS_ERROR, "When connecting to target, ");
+	snprintf(finalcmd, 199, "set arch riscv:rv32\n");
+	send_gdb_cmd(finalcmd, drive_gdb_reply_buffer, display_replies);
+	match_gdb_output(drive_gdb_reply_buffer, "^done", IS_ERROR, "When connecting to target, ");
 	//Deuxième commande lancer dans gdb
 	send_gdb_cmd("-target-download\n", drive_gdb_reply_buffer, display_replies);
 	match_gdb_output(drive_gdb_reply_buffer, "^done", IS_ERROR, "When connecting to simulator, ");
@@ -270,10 +273,6 @@ int init_gdb(char * drive_gdb_reply_buffer, char * target)
 	return 0;	
 }
 
-
-//Si erreur : "(No debugging symbols found in hello)\n"
-//Cela veut dire qu'il faut utiliser des options a la compilation
-//ex: riscv64-unknown-elf-gcc -g3 hello.c -o hello
 
 int main(int argc, char ** argv)
 	{
@@ -413,7 +412,9 @@ int main(int argc, char ** argv)
 		PROC(_step)(iss);
 
 		read_vars_this_instruction(drive_gdb_reply_buffer);
-		//fprintf(stderr,"valeur de %s: %08X\n",reg_infos[15].name,reg_infos[15].gdb);
+		fprintf(stderr,"valeur de %s: %16lX\tvaleur gliss: %16lX\n",reg_infos[29].name,reg_infos[29].gdb,reg_infos[29].gliss);
+		fprintf(stderr,"valeur de %s: %16lX\tvaleur gliss: %16lX\n",reg_infos[30].name,reg_infos[30].gdb,reg_infos[30].gliss);
+		fprintf(stderr,"valeur de %s: %16lX\tvaleur gliss: %16lX\n",reg_infos[32].name,reg_infos[32].gdb,reg_infos[32].gliss);
 		if (! stall_gdb)
 			compare_regs_this_instruction(drive_gdb_reply_buffer, real_state, curinstr, instr_count);
 			
@@ -451,7 +452,6 @@ int main(int argc, char ** argv)
 void drive_gdb()
 	{
 	char *gdb_argv[] = {GNU_TARGET"-gdb", "--interpreter", "mi",  "--quiet", gpname, NULL};
-	fprintf(stderr,"gpname = %s\n",gpname);	//gpname=rot13-64
 	setvbuf(stdout, NULL, _IONBF, 0);
 	setvbuf(stdin, NULL, _IONBF, 0);
 	close(to_gdb_pipe[1]);

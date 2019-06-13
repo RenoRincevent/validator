@@ -1,0 +1,3 @@
+riscv64-unknown-elf-gcc -march=rv32imaf -mabi=ilp32f -nostartfiles -I./p -I./scalar -T./link.ld add.S -o add
+
+riscv64-unknown-elf-objdump -d add > add.dump

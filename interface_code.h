@@ -22,8 +22,8 @@ typedef struct
 	char *name;
 	int gdb_idx;
 	int size;
-	/* can deal with register up to 64 bits */
-	uint64_t gliss, gdb, gliss_last, gdb_last;
+	/* can deal with register up to 32 bits, extends to uint64_t if you want 64 bits */
+	uint32_t gliss, gdb, gliss_last, gdb_last;
 	/* description of corresponding gliss register and its index in bank */
 	int gliss_reg;
 	int gliss_idx;

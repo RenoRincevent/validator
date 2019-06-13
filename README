@@ -15,7 +15,7 @@ $ riscv64-unknown-elf-gcc -march=rv32imaf -mabi=ilp32f -g -Og -T spike.lds -nost
 //-->march=rv64imafdc/mabi=lp64d
 
 II) To debug this program, first run spike telling it to listen for OpenOCD:
-$ spike --rbb-port=9824 -m0x10000000:0x20000 rot13-64
+$ spike --isa=rv32imaf --rbb-port=9824 -m0x10000000:0x20000 rot13-64
 Listening for remote bitbang connection on port 9824.
 
 III) In a separate shell run OpenOCD with the appropriate configuration file:
