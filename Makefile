@@ -36,12 +36,12 @@ PROC_CFLAGS=  -DGLISS_REG_H=\"$(PROC_INCL)\" -DPROC_INIT_CODE='$(PROC_INIT_CODE)
 
 #do not modify below this line
 SRCS = main.c io_module.c gdb_interface.c interface_code_dump_regs.c \
-	interface_code_compare_regs.c log.c interface_code_read_vars.c interface_code.c register.c $(PROC_SRC) /home/manu/Stage/riscv-nmp-gliss3-master/src/loader.c
-INCL = io_module.h all_inc.h  interface_code.h internal.h register.h $(PROC_INCL) /home/manu/Stage/riscv-nmp-gliss3-master/include/RV32G/loader.h
+	interface_code_compare_regs.c log.c interface_code_read_vars.c interface_code.c register.c $(PROC_SRC) /home/manu/Stage/riscv-nmp-gliss3-master/src/loader.c /home/manu/Stage/riscv-nmp-gliss3-master/src/mem.c
+INCL = io_module.h all_inc.h  interface_code.h internal.h register.h $(PROC_INCL) /home/manu/Stage/riscv-nmp-gliss3-master/include/RV32G/loader.h /home/manu/Stage/riscv-nmp-gliss3-master/include/RV32G/mem.h
 
 OBJS = $(SRCS:.c=.o)
 CC = gcc
-CFLAGS = -W -Wall -g -I$(GLISS_ARCH)/include -DGNU_TARGET=\"$(GNU_TARGET)\" -DGDB_NAME=\"$(GDB_NAME)\" -DGLISS_API_H=\<$(PROC_NAME)/api.h\> -DPROC'(x)'=$(PROC_NAME)\#\#x $(PROC_CFLAGS) -DGLISS_MEM_H=\<$(PROC_NAME)/mem.h\>
+CFLAGS = -W -Wall -g -I$(GLISS_ARCH)/include -DGNU_TARGET=\"$(GNU_TARGET)\" -DGDB_NAME=\"$(GDB_NAME)\" -DGLISS_API_H=\<$(PROC_NAME)/api.h\> -DPROC'(x)'=$(PROC_NAME)\#\#x $(PROC_CFLAGS) -DGLISS_MEM_H=\<$(PROC_NAME)/mem.h\> -DRV32G_MEM_SPY
 LDFLAGS = -L$(GLISS_ARCH)/src
 LINK = libtool --mode=link $(CC) $(LINKFLAGS) -o $@
 
@@ -51,7 +51,7 @@ LINK = libtool --mode=link $(CC) $(LINKFLAGS) -o $@
 all : validator3-$(PROC_NAME)
 
 validator3-$(PROC_NAME) : interface_code.h $(INCL) $(CFG) $(OBJS)
-	$(LINK) $(OBJS) -lm  -l$(PROC_NAME) $(LDFLAGS) 
+	$(LINK) $(OBJS)  -l$(PROC_NAME) $(LDFLAGS) -lm
 
 clean:
 	rm -f $(OBJS)
@@ -64,4 +64,3 @@ interface_code.o: interface_code.c
 interface_code.c: interface_code.h
 interface_code.h: generate_interface_code.py $(CFG)
 	 python generate_interface_code.py -i $(CFG) -p $(PROC_NAME)
-

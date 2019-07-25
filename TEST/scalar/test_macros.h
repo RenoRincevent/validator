@@ -408,7 +408,7 @@ test_ ## testnum: \
   fld f0, 0(a0); \
   fld f1, 8(a0); \
   fld f2, 16(a0); \
-  ld  a3, 24(a0); \
+  lw  a3, 24(a0); \
   code; \
   fsflags a1, x0; \
   li a2, flags; \

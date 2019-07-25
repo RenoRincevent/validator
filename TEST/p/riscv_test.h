@@ -164,13 +164,13 @@ reset_vector:                                                           \
         bne t0, t1, other_exception;                                    \
 1:      csrwi mstatus, 0;                                               \
         init;                                                           \
-        EXTRA_INIT;                                                     \
-        EXTRA_INIT_TIMER;                                               \
-        la t0, 1f;                                                      \
-        csrw mepc, t0;                                                  \
-        csrr a0, mhartid;                                               \
-        mret;                                                           \
-1:
+//        EXTRA_INIT;                                                     \
+//        EXTRA_INIT_TIMER;                                               \
+//        la t0, 1f;                                                      \
+//        csrw mepc, t0;                                                  \
+//        csrr a0, mhartid;                                               \
+//        mret;                                                           \
+//1:
 
 //-----------------------------------------------------------------------
 // End Macro

@@ -1,10 +1,9 @@
-In directory /Stage/riscv-tools/TEST :
 we need openOCD, spike, and riscv gnu toolchain to run validator.
 
 
 I) Compile the file :
-$ riscv64-unknown-elf-gcc -march=rv32imaf -mabi=ilp32f -g -Og -o rot13-64.o -c rot13.c
-$ riscv64-unknown-elf-gcc -march=rv32imaf -mabi=ilp32f -g -Og -T spike.lds -nostartfiles -o rot13-64 rot13-64.o
+$ riscv64-unknown-elf-gcc -march=rv32imafd -mabi=ilp32f -g -Og -o rot13-64.o -c rot13.c
+$ riscv64-unknown-elf-gcc -march=rv32imafd -mabi=ilp32f -g -Og -T spike.lds -nostartfiles -o rot13-64 rot13-64.o
 //this is for 32-bits ISA. Other options are aviable:
 //-->march=rv32i/mabi=ilp32
 //-->march=rv32im/mabi=ilp32
@@ -23,5 +22,3 @@ $ openocd -f spike.cfg
 
 IV) In yet another shell, start validator :
 $ ./validator3-RV32G -lp rot13-64 localhost:3333
-
-

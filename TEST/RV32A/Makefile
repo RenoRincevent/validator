@@ -1,13 +1,13 @@
 RISCV_PREFIX ?= riscv64-unknown-elf-
 RISCV_GCC ?= $(RISCV_PREFIX)gcc
 RISCV_OBJDUMP ?= $(RISCV_PREFIX)objdump -D
-RISCV_GCC_OPTS ?= -march=rv32imafd -mabi=ilp32f -nostartfiles -I../p -I../scalar -T../link.ld
+RISCV_GCC_OPTS ?= -march=rv32imaf -mabi=ilp32f -nostartfiles -I../p -I../scalar -T../link.ld
 MYDIR=./EXEC
 MYDUMP=./DUMP
 
 
 
-all: add addi sub auipc lui and or sll slt sltu sra srl xor andi ori slli slti sltiu srai srli xori
+all: amoadd_w amoswap_w amoxor_w amoand_w amoor_w amomin_w amomax_w amominu_w amomaxu_w lrsc
 
 %: %.S
 	[ -d $(MYDIR) ] || mkdir -p $(MYDIR)
@@ -16,7 +16,7 @@ all: add addi sub auipc lui and or sll slt sltu sra srl xor andi ori slli slti s
 	$(RISCV_OBJDUMP) $(MYDIR)/$@ > $(MYDUMP)/$@.dump
 
 .PHONY: all
-
+	
 
 clean:
 	rm -r $(MYDIR)

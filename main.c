@@ -9,12 +9,11 @@ main.c : main functions
 #include "interface_code.h"
 #include GLISS_REG_H
 #include GLISS_API_H
+#include GLISS_MEM_H
 #include "internal.h"
 #include "all_inc.h"
 #include "io_module.h"
 #include "register.h"
-
-
 
 /* pipes to communicate with GDB */
 int to_gdb_pipe[2];
@@ -44,14 +43,14 @@ void gdb_disasm_error_report();
 char target_location[50];
 int exit_on_errors = 1;
 char gpname[200];
-//int init_registers = 1; 
+//int init_registers = 1;
 int instr_count;
 
 void catch_sigusr1(int sig)
 	{
 	fprintf(stderr, "Program at 0x%08x, instruction number %d\n", gdb_pc, instr_count);
 	}
-	
+
 void usage(char * pname)
 {
 	fprintf(stderr, "Usage: %s\t[-V|--version] [-h|--help] [--log|-l] [--values|-v] [--replies|-r] [--no-exit-error|-x] [--program|-p] [--dumps|-d] [target_host:port]\n", pname);
@@ -64,10 +63,10 @@ void usage(char * pname)
 			"\t--program\tname of the test program to run\n"
 			"\t--dumps\t\tdump the values of all registers on error\n");
 }
-	
+
 void parse_commandline(int argc, char ** argv)
 	{
-		
+
 	int longindex;
 	char option;
 	extern int setenv (const char *name, const char *value, int overwrite);
@@ -107,24 +106,24 @@ void parse_commandline(int argc, char ** argv)
 				exit(5);
 		}
 	}
-		
+
 	if ( optind < argc )
 	{
 		printf("Using GDB debugger \"%s\"\n", argv[optind]);
 		sprintf(target_location, "%s", argv[optind]);
 	}
-	else 
+	else
 	{
 		fprintf(stderr, "ERROR: No commandline parameter given for GDB debugger location\n");
 		usage(argv[0]);
 		exit(1);
 	}
 }
-	
+
 void disasm_error_report(char * drive_gdb_reply_buffer, PROC(_state_t) * state, PROC(_inst_t) * instr, int cpt, int do_exit)
 {
 	printf("PC(nPC) : GDB=%08X(%08X), GLISS=%08X(%08X)\n", gdb_pc, gdb_npc, gliss_pc, gliss_npc);
-	
+
 	char * reptr;
 
 	/* example of reply: */
@@ -143,7 +142,7 @@ void disasm_error_report(char * drive_gdb_reply_buffer, PROC(_state_t) * state, 
 		*reptr = '\n';
 		*(reptr+1)= '\0';
 	}
-	
+
 	reptr = strstr(drive_gdb_reply_buffer, "[{");
 	reptr += 2;
 	printf("====GDB disasm: ");
@@ -153,7 +152,7 @@ void disasm_error_report(char * drive_gdb_reply_buffer, PROC(_state_t) * state, 
 
 	/* now gliss disasm */
 	char dis[200];
-	if ( instr ) 
+	if ( instr )
 	{
 		/* only 1 instr */
 		uint32_t cod = PROC(_mem_read32)(PROC(_get_memory)(platform, RV32G_MAIN_MEMORY), gliss_pc); //Non générique a cause de RV32G_MAIN_MEMORY
@@ -174,7 +173,44 @@ void disasm_error_report(char * drive_gdb_reply_buffer, PROC(_state_t) * state, 
 		}
 	}
 	/*dump_float_registers(real_state);*/
-	if ( exit_on_errors && do_exit ) exit(1);		
+	if ( exit_on_errors && do_exit ) exit(1);
+}
+
+void memorySpy(PROC(_memory_t) *mem, PROC(_address_t) addr, PROC(_size_t) size, PROC(_access_t) access, void *data){
+	if(access == 1){
+		int r;
+		char finalcmd[200];
+		char reply_buffer[4000];
+		memset(reply_buffer, 0, 4000);
+		char dataGDB[9];
+		memset(dataGDB, 0, 9);
+		char dataGLISS[9];
+		memset(dataGLISS, 0, 9);
+
+		r = PROC(_mem_read32)(mem, addr);
+		snprintf(dataGLISS, 9, "%08x", r);
+
+		snprintf(finalcmd, 199, "-data-read-memory-bytes 0x%08X 4\n", addr);
+		send_gdb_cmd(finalcmd, reply_buffer, display_replies);
+
+		char *ptr;
+		ptr = strstr(reply_buffer, "contents=\"");
+
+		//Cas ou il ne trouve pas la valeur en memoire pour gdb : renvoyer une erreur
+		match_gdb_output(reply_buffer, "^done", IS_ERROR, " Unable to read memory");
+
+		ptr = ptr + 10;
+		for(int i=0; i<=6; i=i+2){
+			dataGDB[6 - i] = *(ptr + i);
+			dataGDB[7 - i] = *(ptr + i + 1);
+		}
+
+		if(strcmp(dataGDB, dataGLISS)!=0){
+			fprintf(stderr, "ERROR: after access to memory word at address %08X, memory word differs\n",addr);
+			fprintf(stderr, "GDB memory word: %s\t GLISS memory word: %s\n",dataGDB,dataGLISS);
+			exit(1);
+		}
+	}
 }
 
 int init_gliss(char * drive_gdb_reply_buffer)
@@ -208,7 +244,7 @@ int init_gliss(char * drive_gdb_reply_buffer)
 	//TODO leon_set_range_callback(leon_get_memory(platform, LEON_MAIN_MEMORY), 0X80000000, 0xFFFFFFFF, &gdb_callback);
 	// !!DEBUG!! trouble with mem accesses (double accesses like ldd, std, lddf, stdf), it seems
 	//leon_set_range_callback(leon_get_memory(platform, LEON_MAIN_MEMORY), 0X40300000, 0x40400000, &debug_callback);
-	
+
 	send_gdb_cmd("-data-evaluate-expression $sp\n", drive_gdb_reply_buffer, display_replies);
 	printf("-data-eval-expr sp :%s\n", drive_gdb_reply_buffer);
 	uint32_t sp;
@@ -220,11 +256,11 @@ int init_gliss(char * drive_gdb_reply_buffer)
 	uint32_t fp;
 	read_gdb_output_pc(drive_gdb_reply_buffer, &fp);
 	printf( " => gdb fp=%08X\n", fp);
-	
+
 	/* gliss is stopped at PC=0x40000000 (trap table), gdb also
 	 * let's read PC and nPC */
 	send_gdb_cmd("-data-evaluate-expression $pc\n", drive_gdb_reply_buffer, display_replies);
-	read_gdb_output_pc(drive_gdb_reply_buffer, &gdb_pc);	
+	read_gdb_output_pc(drive_gdb_reply_buffer, &gdb_pc);
 	send_gdb_cmd("-data-evaluate-expression $npc\n", drive_gdb_reply_buffer, display_replies);
 	read_gdb_output_pc(drive_gdb_reply_buffer, &gdb_npc);
 	gliss_pc = real_state->PC;
@@ -232,13 +268,7 @@ int init_gliss(char * drive_gdb_reply_buffer)
 
 	/* processor specific initialization code */
 	PROC_INIT_CODE
-	//real_state->R[5] = real_state->PC; 	//t0: start address
-	//real_state->R[11] = 0x21;		//a1
-	//real_state->R[12] = 0xc;		//a2
-	//real_state->R[13] = 0x6;		//a3
-	//real_state->R[14] = 0xb3;		//a4
-	//real_state->R[15] = 0x5;		//a5
-	//real_state->R[15] = 0x10011000;		//a5: start section .data
+	real_state->CSRS[2] = 7;
 
 	return 0;
 }
@@ -249,17 +279,17 @@ int init_gdb(char * drive_gdb_reply_buffer, char * target)
 	close(to_gdb_pipe[0]);
 	close(from_gdb_pipe[1]);
 	from_gdb = fdopen(from_gdb_pipe[0], "r");
-	
+
 	/* wait for the command invite, discard the rest */
 	while ( ! strstr(drive_gdb_reply_buffer, "(gdb)") )
 	{
 		memset(drive_gdb_reply_buffer, 0, 3999);
 		fgets(drive_gdb_reply_buffer, 3999, from_gdb);
 		printf(drive_gdb_reply_buffer);
-	} 
-	
+	}
+
 	char finalcmd[200];
-	//Premiere commande lancer dans gdb	
+	//Premiere commande lancer dans gdb
 	snprintf(finalcmd, 199, "-target-select remote tcp:%s\n", target);
 	send_gdb_cmd(finalcmd, drive_gdb_reply_buffer, display_replies);
 	match_gdb_output(drive_gdb_reply_buffer, "^connected", IS_ERROR, "When connecting to target, ");
@@ -270,7 +300,7 @@ int init_gdb(char * drive_gdb_reply_buffer, char * target)
 	send_gdb_cmd("-target-download\n", drive_gdb_reply_buffer, display_replies);
 	match_gdb_output(drive_gdb_reply_buffer, "^done", IS_ERROR, "When connecting to simulator, ");
 
-	return 0;	
+	return 0;
 }
 
 
@@ -290,7 +320,7 @@ int main(int argc, char ** argv)
 		usage(argv[0]);
 		exit (1);
 	}
-		
+
 	/* creating pipes to redirect GDB I/O */
 	if ( pipe(to_gdb_pipe) )
 	{
@@ -310,32 +340,34 @@ int main(int argc, char ** argv)
 		usage(argv[0]);
 		exit(1);
 	}
-			
+
 	signal(SIGUSR1, catch_sigusr1);
-		
-		
-	
+
+
+
 	/* launching GDB */
 	if ( ! ( drive_gdb_pid = fork () ) )
 		drive_gdb();
 
 	printf("Initializing GDB\n");
 	init_gdb(drive_gdb_reply_buffer, target_location);
-		
+
 	printf("Initializing Gliss\n");
 	init_gliss(drive_gdb_reply_buffer);
+	/* Set the memory spy */
+	PROC(_mem_set_spy)(real_state->M,memorySpy,0);
 	/* after gliss and gdb are set, initialize the structure containing the infos about registers */
-	init_gdb_regs(drive_gdb_reply_buffer);	
+	init_gdb_regs(drive_gdb_reply_buffer);
 //	for(int k=0; k<NUM_REG;k++){
 //		fprintf(stderr,"registre(%d): %s\tgdb_idx: %d\tgliss_reg: %d\n",k,reg_infos[k].name,reg_infos[k].gdb_idx,reg_infos[k].gliss_reg);
 //		fprintf(stderr,"\tgliss_last: %ld\tgliss: %ld\tgdb_last: %ld\n",reg_infos[k].gliss_last,reg_infos[k].gliss,reg_infos[k].gdb_last);
 //	}
-	
+
 	instr_count = 0;
 	curinstr = PROC(_decode)(iss->decoder, real_state->PC);
 	read_vars_this_instruction(drive_gdb_reply_buffer);
-	
-	//Init registers 	
+
+	//Init registers
 	for(int k =0; k<32; k++){
 		real_state->R[k] = reg_infos[k].gdb;
 		reg_infos[k].gliss = reg_infos[k].gdb;
@@ -346,11 +378,12 @@ int main(int argc, char ** argv)
 	}
 	compare_regs_this_instruction(drive_gdb_reply_buffer, real_state, curinstr, instr_count);
 	PROC(_free_inst)(curinstr);
-	
+
 	/* used to pause gdb while waiting for gliss2 to catch up */
 	int stall_gdb = 0;
 
-	while ( 1 ) 
+	// while ( instr_count < 426 )
+	while (1)
 	{
 		instr_count++;
 
@@ -361,23 +394,15 @@ int main(int argc, char ** argv)
 		read_gdb_output_pc(drive_gdb_reply_buffer, &gdb_npc);
 		gliss_pc = real_state->PC;
 		gliss_npc = real_state->NPC;
-		//printf("\nAbout to execute inst %d, GDB: PC=%08X(%08X), GLISS: PC=%08X(%08X)\n", instr_count, gdb_pc, gdb_npc, gliss_pc, gliss_npc);
 
 		if (! stall_gdb)
 		{
 			sprintf(drive_gdb_cmd_buffer, "-data-disassemble -s 0x%08X -e 0x%08X -- 0\n", gdb_pc, gdb_pc+4);
 			send_gdb_cmd(drive_gdb_cmd_buffer, drive_gdb_reply_buffer, 0);
-			/*if ((instr_count % 50000) == 0)
-			{*/
-				printf("\nAbout to execute inst %d, GDB: PC=%08X(%08X), GLISS: PC=%08X(%08X)\n", instr_count, gdb_pc, gdb_npc, gliss_pc, gliss_npc);
-				disasm_error_report(drive_gdb_reply_buffer, NULL, NULL, 1, 0);
-			/*}*/
+			printf("\nAbout to execute inst %d, GDB: PC=%08X(%08X), GLISS: PC=%08X(%08X)\n", instr_count, gdb_pc, gdb_npc, gliss_pc, gliss_npc);
+			disasm_error_report(drive_gdb_reply_buffer, NULL, NULL, 1, 0);
 		}
-		
-		/* LEON specific */
-		/* GDB steps automaticaly over annuled instr, gliss2 doesn't do that */
-		/* so we have to make sure GDB waits for GLISS2 in those cases */
-		
+
 		/* GDB step */
 		if (! stall_gdb)
 		{
@@ -390,12 +415,12 @@ int main(int argc, char ** argv)
 				printf("Program %s\n", drive_gdb_reply_buffer + 1 );
 				break;
 			}
-		
+
 			match_gdb_output(drive_gdb_reply_buffer, "*stopped,reason=\"end-stepping-range\"", IS_ERROR, "When trying to advance of one step, ");
 		}
 		/*else
 			printf("====Annulled instruction, GDB inhibited to wait for GLISS2\n");*/
-				
+
 		/* GLISS step */
 		if (display_values) printf("Before instr %10d, PC(nPC) gdb %08X(%08X) gliss %08X(%08X)\n", instr_count, gdb_pc, gdb_npc, gliss_pc, gliss_npc);
 		if ( !stall_gdb && (gliss_pc != gdb_pc))
@@ -412,21 +437,19 @@ int main(int argc, char ** argv)
 		PROC(_step)(iss);
 
 		read_vars_this_instruction(drive_gdb_reply_buffer);
-		fprintf(stderr,"valeur de %s: %16lX\tvaleur gliss: %16lX\n",reg_infos[29].name,reg_infos[29].gdb,reg_infos[29].gliss);
-		fprintf(stderr,"valeur de %s: %16lX\tvaleur gliss: %16lX\n",reg_infos[30].name,reg_infos[30].gdb,reg_infos[30].gliss);
-		fprintf(stderr,"valeur de %s: %16lX\tvaleur gliss: %16lX\n",reg_infos[32].name,reg_infos[32].gdb,reg_infos[32].gliss);
-		if (! stall_gdb)
+		//fprintf(stderr,"valeur de %s: %08lX\tvaleur gliss: %08lX,\n",reg_infos[33].name,reg_infos[33].gdb,reg_infos[33].gliss);
+		if ( ! stall_gdb)
 			compare_regs_this_instruction(drive_gdb_reply_buffer, real_state, curinstr, instr_count);
-			
+
                 PROC(_free_inst)(curinstr);
 	}
-		
-		
-		
-	/*struct rusage statistiques;
+
+
+
+	struct rusage statistiques;
 	getrusage(RUSAGE_SELF, & statistiques);
 	printf("User time : %ld s %ld us\n", statistiques.ru_utime.tv_sec, statistiques.ru_utime.tv_usec);
-	printf("Sys time : %ld s %ld us\n", statistiques.ru_stime.tv_sec, statistiques.ru_stime.tv_usec);*/
+	printf("Sys time : %ld s %ld us\n", statistiques.ru_stime.tv_sec, statistiques.ru_stime.tv_usec);
 	send_gdb_cmd("-gdb-exit\n", drive_gdb_reply_buffer, display_replies);
 	fd_set tmp_set;
 	FD_ZERO(&tmp_set);
@@ -455,10 +478,10 @@ void drive_gdb()
 	setvbuf(stdout, NULL, _IONBF, 0);
 	setvbuf(stdin, NULL, _IONBF, 0);
 	close(to_gdb_pipe[1]);
-	
+
 	/* no logfile needed */
 	close_log_file();
-	
+
 	/* redirecting stdin */
 	if ( dup2(to_gdb_pipe[0], STDIN_FILENO) == -1 )
 		{
@@ -467,7 +490,7 @@ void drive_gdb()
 		}
 	close(to_gdb_pipe[0]);
 
-	
+
 	close(from_gdb_pipe[0]);
 	/* redirecting stdout */
 	if ( dup2(from_gdb_pipe[1], STDOUT_FILENO) == -1 )
@@ -489,4 +512,3 @@ void drive_gdb()
 
 
 #undef MAIN_C
-	

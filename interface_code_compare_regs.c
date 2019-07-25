@@ -11,7 +11,7 @@ void compare_regs_this_instruction(char *drive_gdb_reply_buffer, RV32G_state_t *
 {
 	int i;
 
-	for (i = 0; i < NUM_REG; i++)
+	for (i = 0; i < NUM_REG - 3; i++)
 	{
 		if (reg_infos[i].relative)
 		{
@@ -32,9 +32,9 @@ void compare_regs_this_instruction(char *drive_gdb_reply_buffer, RV32G_state_t *
 		else
 		if (reg_infos[i].gliss != reg_infos[i].gdb)
 		{
-			if ( instr_count ) 
+			if ( instr_count )
 				fprintf(stdout, "\n\nAfter 0x%08x (instruction #%i), register %s differs\n", gdb_pc, instr_count, reg_infos[i].name);
-			else 
+			else
 				fprintf(stdout, "\n\nAt initialization (0x%08x), register %s differs\n", gdb_pc, reg_infos[i].name);
 
 			printf("GLISS\t\t\t\t\t\tGDB\n \t BEFORE       AFTER       BEFORE       AFTER\n\n");

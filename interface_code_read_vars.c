@@ -43,14 +43,14 @@ static int get_next_reg_name_and_size(char **name_list, int *cnt)
 	{
 		while (**name_list == ' ')
 			(*name_list)++;
-		
+
 		if (**name_list == ']')
 			return -1;
-	
+
 		int cpt = 0;
 		while (*(*name_list + cpt)  != ' ')
 			cpt++;
-	
+
 		int i;
 		for (i = 0; i<NUM_REG; i++)
 		{
@@ -67,7 +67,7 @@ static int get_next_reg_name_and_size(char **name_list, int *cnt)
 		/* reg not found, skip it */
 		*name_list += cpt;
 		(*cnt)++;
-		
+
 	}
 }
 
@@ -90,23 +90,22 @@ static int get_next_reg_value(char **val_list, uint64_t *v)
 void init_gdb_regs(char * drive_gdb_reply_buffer)
 {
 	/* retrieves the list of all registers watched by gdb */
-	send_gdb_cmd("-data-list-register-names\n", drive_gdb_reply_buffer, display_replies);	
+	send_gdb_cmd("-data-list-register-names\n", drive_gdb_reply_buffer, display_replies);
 	match_gdb_output(drive_gdb_reply_buffer, "^done", IS_ERROR, "When trying to get register name list, ");
 	/* find beginning of register name list and "clean" the list */
 	while (*drive_gdb_reply_buffer++ != '[');
 	/* each reg name is surrounded by 2 " */
 	nb_regs = count_in_string(drive_gdb_reply_buffer, '\"') / 2;
 	cut_string(drive_gdb_reply_buffer);
-	//fprintf(stderr, "registres : %s\n",drive_gdb_reply_buffer);	
-	
+	//fprintf(stderr, "registres : %s\n",drive_gdb_reply_buffer);
+
 	/* fill in reg_infos */
 	int idx, i, gdb_idx = -1;
 	int j=0;
 	for (i=0; i<NUM_REG; i++)
 	{	
-		//core dumped a l'iteration 67: la derniere
 		//printf("before:#%s#\n", drive_gdb_reply_buffer);
-		idx = get_next_reg_name_and_size(&drive_gdb_reply_buffer, &gdb_idx); //TODO core dumped a l'appel de cette fonction, gdb n'a pas de register npc pour riscv 
+		idx = get_next_reg_name_and_size(&drive_gdb_reply_buffer, &gdb_idx); //TODO core dumped a l'appel de cette fonction, gdb n'a pas de register npc pour riscv
 		//printf("after :#%s#\n", drive_gdb_reply_buffer);
 		if (idx < 0)
 		{
@@ -123,13 +122,13 @@ void init_gdb_regs(char * drive_gdb_reply_buffer)
 		j++;
 	}
 }
-	
+
 void read_vars_this_instruction(char * drive_gdb_reply_buffer)
 {
 	/* will temporary hold register values which are thus limited to 64 bits */
 	uint64_t *reg_val;
 
-	/* first read gdb regs in raw format (all in hexa with full length) */	
+	/* first read gdb regs in raw format (all in hexa with full length) */
 	char cmd[3999] = "-data-list-register-values r";
 	char buffer[20];
 	for(int k=0; k<NUM_REG-3;k++){
@@ -143,7 +142,7 @@ void read_vars_this_instruction(char * drive_gdb_reply_buffer)
 
 	/* find beginning of register value list */
 	while (*drive_gdb_reply_buffer++ != '[');
-	
+
 	/* store value in tmp array */
 	reg_val = malloc(nb_regs * sizeof(uint64_t));
 	int i = 0;
@@ -153,7 +152,7 @@ void read_vars_this_instruction(char * drive_gdb_reply_buffer)
 	for (i=0; i<NUM_REG; i++)
 	{
 		reg_infos[i].gdb = reg_val[reg_infos[i].gdb_idx];
-		reg_infos[i].gliss = get_gliss_reg(real_state, i); //TODO ici les valeur pour gliss ne sont pas modifier, a part celui de PC	
+		reg_infos[i].gliss = get_gliss_reg(real_state, i); //TODO ici les valeur pour gliss ne sont pas modifier, a part celui de PC
 	}
 	reg_infos[66].gdb = 0x7;
 
@@ -171,4 +170,3 @@ void read_vars_this_instruction(char * drive_gdb_reply_buffer)
 }
 
 #endif /* INTERFACE_CODE_READ_VARS */
-

@@ -60,7 +60,7 @@ void dump_float_registers(PROC(_state_t) * st)
 		uint32_t u32[2];
 		float f32[2];
 	} val;
-	
+
 	int i;
 	printf("gliss float registers:\n");
 	for (i=0; i<31; i=i+2) {
@@ -89,12 +89,9 @@ void dump_float_registers(PROC(_state_t) * st)
 
 #define REG_R		0
 #define REG_F		1
-#define REG_FCSR	2
 #define REG_NPC 	3
 #define REG_PC		4
 #define REG_LLbit	5
-#define REG_FFLAGS	6
-#define REG_FRM		7
 
 
 /* function called at initialization,
@@ -104,7 +101,7 @@ void dump_float_registers(PROC(_state_t) * st)
 void get_gliss_reg_addr(char *desc, PROC(_state_t) * st, int *bank, int *idx)
 {
 	/*  let's hope we have only simple reg name or indexed by integer */
-	
+
 	/* search an index */
 	char *idx_ptr = desc;
 	while (*idx_ptr && (*idx_ptr != '['))
@@ -113,20 +110,14 @@ void get_gliss_reg_addr(char *desc, PROC(_state_t) * st, int *bank, int *idx)
 		*idx = strtoul(idx_ptr + 1, 0, 0);
 	else
 		*idx = 0;
-	
+
 	/* from here it should be auto generated */
-	if (strncmp("FCSR", desc, 4) == 0)
-		*bank = REG_FCSR;
-	else if (strncmp("NPC", desc, 3) == 0)
+	if (strncmp("NPC", desc, 3) == 0)
 		*bank = REG_NPC;
 	else if (strncmp("PC", desc, 2) == 0)
 		*bank = REG_PC;
 	else if (strncmp("R", desc, 1) == 0)
 		*bank = REG_R;
-	else if (strncmp("FFLAGS", desc, 6) == 0)
-		*bank = REG_FFLAGS;
-	else if (strncmp("FRM",desc,3) == 0)
-		*bank = REG_FRM;
 	else if (strncmp("F", desc, 1) == 0)
 		*bank = REG_F;
 }
@@ -147,15 +138,12 @@ uint64_t get_gliss_reg(PROC(_state_t) * st, int idx)
 		v.f = st->F[reg_infos[idx].gliss_idx];
 		return v.u;
 	}
-	case REG_FCSR:
-		return st->FCSR;
 	case REG_NPC:
 		return st->NPC;
 	case REG_PC:
 		return st->PC;
 	case REG_LLbit:
 		return st->LLbit;
-	case REG_FFLAGS:
-		return st->FFLAGS;
+		//TODO with CSRs
 	}
 }
